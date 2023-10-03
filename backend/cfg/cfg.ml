@@ -518,7 +518,7 @@ let same_location (r1 : Reg.t) (r2 : Reg.t) =
   | Stack _ ->
     Stack_class.equal
       (Stack_class.of_machtype instr.arg.(0).typ)
-      (Stack_class.of_machtype instr.res.(0).typ))
+      (Stack_class.of_machtype instr.res.(0).typ)
 
 let is_noop_move instr =
   match instr.desc with
