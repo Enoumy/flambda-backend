@@ -129,7 +129,7 @@ module Sort : sig
 
   val for_array_get_result : t
 
-  val for_array_element : t
+  val for_array_comprehension_element : t
 
   val for_list_element : t
 
@@ -199,6 +199,7 @@ type concrete_jkind_reason =
   | Unification_var
   | Optional_arg_default
   | Repr_poly_in_external
+  | Array_element
 
 type annotation_context =
   | Type_declaration of Path.t
@@ -242,7 +243,7 @@ type value_creation_reason =
   | Default_type_jkind
   | Float_record_field
   | Existential_type_variable
-  | Array_element
+  | Array_comprehension_element
   | Lazy_expression
   | Class_type_argument
   | Class_term_argument
@@ -282,6 +283,7 @@ type any_creation_reason =
   | Inside_of_Tarrow
   | Wildcard
   | Unification_var
+  | Array_type_argument
 
 type float64_creation_reason = Primitive of Ident.t
 

@@ -374,7 +374,7 @@ module Sort = struct
 
   let for_array_get_result = value
 
-  let for_array_element = value
+  let for_array_comprehension_element = value
 
   let for_list_element = value
 end
@@ -650,6 +650,7 @@ type concrete_jkind_reason =
   | Unification_var
   | Optional_arg_default
   | Repr_poly_in_external
+  | Array_element
 
 type value_creation_reason =
   | Class_let_binding
@@ -683,7 +684,7 @@ type value_creation_reason =
   | Default_type_jkind
   | Float_record_field
   | Existential_type_variable
-  | Array_element
+  | Array_comprehension_element
   | Lazy_expression
   | Class_type_argument
   | Class_term_argument
@@ -716,6 +717,7 @@ type any_creation_reason =
   | Inside_of_Tarrow
   | Wildcard
   | Unification_var
+  | Array_type_argument
 
 type float64_creation_reason = Primitive of Ident.t
 
@@ -1092,6 +1094,7 @@ end = struct
     | Repr_poly_in_external ->
       fprintf ppf
         "it's the representation polymorphic type in an external declaration"
+    | Array_element -> fprintf ppf "it's the type of an array element"
 
   let rec format_annotation_context ppf : annotation_context -> unit = function
     | Type_declaration p ->
@@ -1130,6 +1133,8 @@ end = struct
       format_with_notify_js ppf
         "there's a call to [type_expression] via the ocaml API"
     | Inside_of_Tarrow -> fprintf ppf "argument or result of a function type"
+    | Array_type_argument ->
+      fprintf ppf "it's the type argument to the array type"
 
   let format_immediate_creation_reason ppf : immediate_creation_reason -> _ =
     function
@@ -1196,7 +1201,8 @@ end = struct
     | Float_record_field -> fprintf ppf "it's the type of a float record field"
     | Existential_type_variable ->
       fprintf ppf "it's an unannotated existential type variable"
-    | Array_element -> fprintf ppf "it's the type of an array element"
+    | Array_comprehension_element ->
+      fprintf ppf "it's the element type of array comprehension"
     | Lazy_expression -> fprintf ppf "it's the type of a lazy expression"
     | Class_type_argument ->
       fprintf ppf "it's a type argument to a class constructor"
@@ -1512,6 +1518,7 @@ module Debug_printers = struct
     | Unification_var -> fprintf ppf "Unification_var"
     | Optional_arg_default -> fprintf ppf "Optional_arg_default"
     | Repr_poly_in_external -> fprintf ppf "Repr_poly_in_external"
+    | Array_element -> fprintf ppf "Array_element"
 
   let rec annotation_context ppf : annotation_context -> unit = function
     | Type_declaration p -> fprintf ppf "Type_declaration %a" Path.print p
@@ -1538,6 +1545,7 @@ module Debug_printers = struct
     | Inside_of_Tarrow -> fprintf ppf "Inside_of_Tarrow"
     | Wildcard -> fprintf ppf "Wildcard"
     | Unification_var -> fprintf ppf "Unification_var"
+    | Array_type_argument -> fprintf ppf "Array_type_argument"
 
   let immediate_creation_reason ppf : immediate_creation_reason -> _ = function
     | Empty_record -> fprintf ppf "Empty_record"
@@ -1581,7 +1589,7 @@ module Debug_printers = struct
     | Default_type_jkind -> fprintf ppf "Default_type_jkind"
     | Float_record_field -> fprintf ppf "Float_record_field"
     | Existential_type_variable -> fprintf ppf "Existential_type_variable"
-    | Array_element -> fprintf ppf "Array_element"
+    | Array_comprehension_element -> fprintf ppf "Array_comprehension_element"
     | Lazy_expression -> fprintf ppf "Lazy_expression"
     | Class_type_argument -> fprintf ppf "Class_type_argument"
     | Class_term_argument -> fprintf ppf "Class_term_argument"
