@@ -922,6 +922,36 @@ let emit_push_trap_label handler =
   traps.push_traps <- lbl::traps.push_traps;
   traps.enter_traps <- Int.Set.add handler traps.enter_traps
 
+(* ISA Extension Checking *)
+
+module Extension = struct
+  module E = Arch.Extension
+
+  (* Must be kept in sync with runtime/isa.c *)
+  let control_symbol = "caml_required_amd64_extensions"
+
+  let index : E.t -> int = function
+    | POPCNT -> 0
+    | PREFETCHW -> 1
+    | PREFETCHWT1 -> 2
+    | SSE3 -> 3
+    | SSSE3 -> 4
+    | SSE4_1 -> 5
+    | SSE4_2 -> 6
+    | CLMUL -> 7
+    | BMI -> 8
+    | BMI2 -> 9
+
+  let emit_check () = (* Emit extension control symbol. *)
+    let open Int64 in
+    let all = E.config () in
+    let word =  E.Set.fold (fun ext acc -> logor acc (shift_left 1L (index ext))) all 0L in
+    emit_global_label_for_symbol control_symbol;
+    D.qword (Const word)
+end
+
+(* Emit Code *)
+
 let emit_atomic instr op (size : Cmm.atomic_bitwidth) addr =
   let src, dst = match op, size with
   | Fetch_and_add, Thirtytwo -> arg32 instr 0, addressing addr DWORD instr 1
