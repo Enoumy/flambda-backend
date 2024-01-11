@@ -447,11 +447,14 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
         prim_coeffects;
         prim_native_name;
         prim_native_repr_args;
-        prim_native_repr_res
+        prim_native_repr_res;
+        prim_is_layout_representation_polymorphic;
       } :
        Primitive.description) as prim_desc) ~(args : Simple.t list list)
     exn_continuation dbg ~current_region
     (k : Acc.t -> Named.t list -> Expr_with_acc.t) : Expr_with_acc.t =
+  if prim_is_layout_representation_polymorphic then
+    Misc.fatal_errorf "close_c_call: C call primitive %s can't be representation polymorphic." prim_name;
   let args =
     List.map
       (function
@@ -502,6 +505,7 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
   in
   let box_return_value =
     match prim_native_repr_res with
+    | _, Repr_poly -> Misc.fatal_error "C call should not have Repr_poly"
     | _, Same_as_ocaml_repr _ -> None
     | _, Unboxed_float -> Some (P.Box_number (Naked_float, alloc_mode))
     | _, Unboxed_integer Pnativeint ->
@@ -526,6 +530,7 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
   let kind_of_primitive_native_repr
       ((_, repr) : Primitive.mode * Primitive.native_repr) =
     match repr with
+    | Repr_poly -> Misc.fatal_error "C call should not have Repr_poly"
     | Same_as_ocaml_repr sort ->
       K.With_subkind.(
         kind
@@ -619,6 +624,7 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
            (arg_repr : Primitive.mode * Primitive.native_repr) ->
         let unbox_arg : P.unary_primitive option =
           match arg_repr with
+          | _, Repr_poly -> Misc.fatal_error "C call should not have Repr_poly"
           | _, Same_as_ocaml_repr _ -> None
           | _, Unboxed_float -> Some (P.Unbox_number Naked_float)
           | _, Unboxed_integer Pnativeint ->

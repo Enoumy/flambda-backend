@@ -1597,6 +1597,7 @@ let structured_constant_layout = function
   | Const_float_array _ | Const_float_block _ -> Pvalue (Parrayval Pfloatarray)
 
 let layout_of_native_repr : Primitive.native_repr -> _ = function
+  | Repr_poly -> Misc.fatal_error "Repr_poly doesn't have a layout"
   | Untagged_int ->  layout_int
   | Unboxed_vector v -> layout_boxed_vector v
   | Unboxed_float -> layout_boxed_float

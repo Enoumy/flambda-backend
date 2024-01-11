@@ -25,6 +25,7 @@ type vec128_type = Int8x16 | Int16x8 | Int32x4 | Int64x2 | Float32x4 | Float64x2
 type boxed_vector = Pvec128 of vec128_type
 
 type native_repr =
+  | Repr_poly
   | Same_as_ocaml_repr of Jkind.Sort.const
   | Unboxed_float
   | Unboxed_vector of boxed_vector
@@ -48,7 +49,8 @@ type description =
     prim_coeffects: coeffects;
     prim_native_name: string;  (* Name of C function for the nat. code gen. *)
     prim_native_repr_args: (mode * native_repr) list;
-    prim_native_repr_res: mode * native_repr }
+    prim_native_repr_res: mode * native_repr;
+    prim_is_layout_representation_polymorphic: bool }
 
 type error =
   | Old_style_float_with_native_repr_attribute
@@ -58,6 +60,7 @@ type error =
   | No_native_primitive_with_non_value
   | Inconsistent_attributes_for_effects
   | Inconsistent_noalloc_attributes_for_effects
+  | Invalid_representation_polymorphic_attribute
 
 exception Error of Location.t * error
 
@@ -65,7 +68,8 @@ type value_check = Bad_attribute | Bad_layout | Ok_value
 
 let check_ocaml_value = function
   | _, Same_as_ocaml_repr Value -> Ok_value
-  | _, Same_as_ocaml_repr _ -> Bad_layout
+  | _, Same_as_ocaml_repr _
+  | _, Repr_poly -> Bad_layout
   | _, Unboxed_float
   | _, Unboxed_vector _
   | _, Unboxed_integer _
@@ -73,6 +77,7 @@ let check_ocaml_value = function
 
 let is_unboxed = function
   | _, Same_as_ocaml_repr _
+  | _, Repr_poly
   | _, Untagged_int -> false
   | _, Unboxed_float
   | _, Unboxed_vector _
@@ -83,7 +88,8 @@ let is_untagged = function
   | _, Same_as_ocaml_repr _
   | _, Unboxed_float
   | _, Unboxed_vector _
-  | _, Unboxed_integer _ -> false
+  | _, Unboxed_integer _
+  | _, Repr_poly -> false
 
 let rec make_native_repr_args arity x =
   if arity = 0 then
@@ -101,10 +107,12 @@ let simple_on_values ~name ~arity ~alloc =
    prim_native_name = "";
    prim_native_repr_args =
      make_native_repr_args arity (Prim_global, Same_as_ocaml_repr Jkind.Sort.Value);
-   prim_native_repr_res = (Prim_global, Same_as_ocaml_repr Jkind.Sort.Value) }
+   prim_native_repr_res = (Prim_global, Same_as_ocaml_repr Jkind.Sort.Value);
+   prim_is_layout_representation_polymorphic = false }
 
 let make ~name ~alloc ~c_builtin ~effects ~coeffects
-      ~native_name ~native_repr_args ~native_repr_res =
+      ~native_name ~native_repr_args ~native_repr_res
+      ~is_layout_representation_polymorphic =
   {prim_name = name;
    prim_arity = List.length native_repr_args;
    prim_alloc = alloc;
@@ -113,9 +121,10 @@ let make ~name ~alloc ~c_builtin ~effects ~coeffects
    prim_coeffects = coeffects;
    prim_native_name = native_name;
    prim_native_repr_args = native_repr_args;
-   prim_native_repr_res = native_repr_res }
+   prim_native_repr_res = native_repr_res;
+   prim_is_layout_representation_polymorphic = is_layout_representation_polymorphic }
 
-let parse_declaration valdecl ~native_repr_args ~native_repr_res =
+let parse_declaration valdecl ~native_repr_args ~native_repr_res ~is_layout_poly =
   let arity = List.length native_repr_args in
   let name, native_name, old_style_noalloc, old_style_float =
     match valdecl.pval_prim with
@@ -144,6 +153,13 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res =
     Attr_helper.has_no_payload_attribute ["only_generative_effects";
                                           "ocaml.only_generative_effects"]
       valdecl.pval_attributes
+  in
+  let is_builtin_prim = String.length name > 0 && name.[0] = '%' in
+  let prim_is_layout_representation_polymorphic =
+    match is_builtin_prim, is_layout_poly with
+    | false, true ->  raise (Error (valdecl.pval_loc,
+                        No_native_primitive_with_non_value))
+    | _, b -> b
   in
   if no_effects_attribute && only_generative_effects_attribute then
     raise (Error (valdecl.pval_loc,
@@ -194,7 +210,7 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res =
                          No_native_primitive_with_repr_attribute))
          | Bad_layout ->
            (* Built-in primitives don't need a native version. *)
-           if not (String.length name > 0 && name.[0] = '%') then
+           if not is_builtin_prim then
              raise (Error (valdecl.pval_loc,
                            No_native_primitive_with_non_value)))
       (native_repr_res :: native_repr_args);
@@ -217,7 +233,8 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res =
    prim_coeffects = coeffects;
    prim_native_name = native_name;
    prim_native_repr_args = native_repr_args;
-   prim_native_repr_res = native_repr_res }
+   prim_native_repr_res = native_repr_res;
+   prim_is_layout_representation_polymorphic }
 
 open Outcometree
 
@@ -283,7 +300,8 @@ let print p osig_val_decl =
      | Prim_poly -> [oattr_local_opt])
     @
     (match repr with
-     | Same_as_ocaml_repr _ -> []
+     | Same_as_ocaml_repr _
+     | Repr_poly -> []
      | Unboxed_float
      | Unboxed_vector _
      | Unboxed_integer _ -> if all_unboxed then [] else [oattr_unboxed]
@@ -331,6 +349,9 @@ let equal_boxed_vector_size bi1 bi2 =
 
 let equal_native_repr nr1 nr2 =
   match nr1, nr2 with
+  | Repr_poly, Repr_poly -> true
+  | Repr_poly, (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _ | Same_as_ocaml_repr _)
+  | (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _ | Same_as_ocaml_repr _), Repr_poly -> false
   | Same_as_ocaml_repr s1, Same_as_ocaml_repr s2 -> Jkind.Sort.equal_const s1 s2
   | Same_as_ocaml_repr _,
     (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _) -> false
@@ -367,9 +388,13 @@ let native_name_is_external p =
   let nat_name = native_name p in
   nat_name <> "" && nat_name.[0] <> '%'
 
-let sort_of_native_repr = function
-  | Same_as_ocaml_repr s -> s
-  | (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _) -> Jkind.Sort.Value
+let sort_of_native_repr repr ~poly_sort = match repr, poly_sort with
+  | Same_as_ocaml_repr s, _ -> s
+  | (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _), _ ->
+    Jkind.Sort.Value
+  | Repr_poly, Some sort -> Jkind.Sort.get_default_value sort
+  | Repr_poly, None ->
+    Misc.fatal_error "Repr_poly doesn't have a sort"
 
 let report_error ppf err =
   match err with
@@ -396,6 +421,9 @@ let report_error ppf err =
   | Inconsistent_noalloc_attributes_for_effects ->
     Format.fprintf ppf "Cannot use [%@%@no_generative_effects] \
                         in conjunction with [%@%@noalloc]."
+  | Invalid_representation_polymorphic_attribute ->
+    Format.fprintf ppf "Attribute [%@rep_poly] can only be used \
+                        on built-in primitives."
 
 let () =
   Location.register_error_of_exn

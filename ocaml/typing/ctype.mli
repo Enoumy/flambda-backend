@@ -207,8 +207,9 @@ val instance_label:
 val prim_mode :
         Mode.Locality.t option -> (Primitive.mode * Primitive.native_repr)
         -> Mode.Locality.t
-val instance_prim_mode:
-        Primitive.description -> type_expr -> type_expr * Mode.Locality.t option
+val instance_prim:
+        Primitive.description -> type_expr ->
+        type_expr * Mode.Locality.t option * Jkind.Sort.t option
 
 val apply:
         ?use_current_level:bool ->

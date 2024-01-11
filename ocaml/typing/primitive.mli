@@ -24,6 +24,7 @@ type boxed_vector = Pvec128 of vec128_type
 (* Representation of arguments/result for the native code version
    of a primitive *)
 type native_repr =
+  | Repr_poly
   | Same_as_ocaml_repr of Jkind.Sort.const
   | Unboxed_float
   | Unboxed_vector of boxed_vector
@@ -57,7 +58,8 @@ type description = private
     prim_coeffects: coeffects;
     prim_native_name: string;  (* Name of C function for the nat. code gen. *)
     prim_native_repr_args: (mode * native_repr) list;
-    prim_native_repr_res: mode * native_repr }
+    prim_native_repr_res: mode * native_repr;
+    prim_is_layout_representation_polymorphic: bool }
 
 (* Invariant [List.length d.prim_native_repr_args = d.prim_arity] *)
 
@@ -76,12 +78,14 @@ val make
   -> native_name:string
   -> native_repr_args: (mode * native_repr) list
   -> native_repr_res: mode * native_repr
+  -> is_layout_representation_polymorphic: bool
   -> description
 
 val parse_declaration
   :  Parsetree.value_description
   -> native_repr_args:(mode * native_repr) list
   -> native_repr_res:(mode * native_repr)
+  -> is_layout_poly:bool
   -> description
 
 val print
@@ -105,8 +109,8 @@ val equal_coeffects : coeffects -> coeffects -> bool
 val native_name_is_external : description -> bool
 
 (** [sort_of_native_repr] returns the sort expected during typechecking (which
-    may be different than the sort used in the external interface). *)
-val sort_of_native_repr : native_repr -> Jkind.Sort.const
+    may be different than the sort used in the external interface). XXX *)
+val sort_of_native_repr : native_repr -> poly_sort:Jkind.Sort.t option -> Jkind.Sort.const
 
 type error =
   | Old_style_float_with_native_repr_attribute
@@ -116,5 +120,6 @@ type error =
   | No_native_primitive_with_non_value
   | Inconsistent_attributes_for_effects
   | Inconsistent_noalloc_attributes_for_effects
+  | Invalid_representation_polymorphic_attribute
 
 exception Error of Location.t * error

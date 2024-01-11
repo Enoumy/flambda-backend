@@ -129,8 +129,11 @@ let rec apply_coercion loc strict restr arg =
         [{name = param; layout = Lambda.layout_module;
           attributes = Lambda.default_param_attribute; mode = alloc_heap}]
         [carg] cc_res
-  | Tcoerce_primitive { pc_desc; pc_env; pc_type; pc_poly_mode } ->
-      Translprim.transl_primitive loc pc_desc pc_env pc_type ~poly_mode:pc_poly_mode None
+  | Tcoerce_primitive { pc_desc; pc_env; pc_type; pc_poly_mode; pc_poly_sort } ->
+      Translprim.transl_primitive loc pc_desc pc_env pc_type
+        ~poly_mode:pc_poly_mode
+        ~poly_sort:pc_poly_sort
+        None
   | Tcoerce_alias (env, path, cc) ->
       let lam = transl_module_path loc env path in
       name_lambda strict arg Lambda.layout_module
@@ -686,7 +689,10 @@ and transl_structure ~scopes loc fields cc rootpath final_env = function
                       | Tcoerce_primitive p ->
                           let loc = of_location ~scopes p.pc_loc in
                           Translprim.transl_primitive
-                            loc p.pc_desc p.pc_env p.pc_type ~poly_mode:p.pc_poly_mode None
+                            loc p.pc_desc p.pc_env p.pc_type
+                            ~poly_mode:p.pc_poly_mode
+                            ~poly_sort:p.pc_poly_sort
+                            None
                       | _ -> apply_coercion loc Strict cc (get_field pos))
                     pos_cc_list, loc)
             and id_pos_list =
@@ -1133,8 +1139,11 @@ let field_of_str loc str =
   let ids = Array.of_list (defined_idents str.str_items) in
   fun (pos, cc) ->
     match cc with
-    | Tcoerce_primitive { pc_desc; pc_env; pc_type; pc_poly_mode } ->
-        Translprim.transl_primitive loc pc_desc pc_env pc_type ~poly_mode:pc_poly_mode None
+    | Tcoerce_primitive { pc_desc; pc_env; pc_type; pc_poly_mode; pc_poly_sort } ->
+        Translprim.transl_primitive loc pc_desc pc_env pc_type
+          ~poly_mode:pc_poly_mode
+          ~poly_sort:pc_poly_sort
+          None
     | Tcoerce_alias (env, path, cc) ->
         let lam = transl_module_path loc env path in
         apply_coercion loc Alias cc lam
@@ -1470,7 +1479,10 @@ let transl_store_structure ~scopes glob map prims aliases str =
     Lsequence(Lprim(mod_setfield pos,
                     [Lprim(Pgetglobal glob, [], Loc_unknown);
                      Translprim.transl_primitive Loc_unknown
-                       prim.pc_desc prim.pc_env prim.pc_type ~poly_mode:prim.pc_poly_mode None],
+                       prim.pc_desc prim.pc_env prim.pc_type
+                       ~poly_mode:prim.pc_poly_mode
+                       ~poly_sort:prim.pc_poly_sort
+                       None],
                     Loc_unknown),
               cont)
 

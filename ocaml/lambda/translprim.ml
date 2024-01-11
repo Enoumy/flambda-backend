@@ -979,7 +979,7 @@ let check_primitive_arity loc p =
 
 (* Eta-expand a primitive *)
 
-let transl_primitive loc p env ty ~poly_mode path =
+let transl_primitive loc p env ty ~poly_mode ~poly_sort path =
   let prim =
     lookup_primitive_and_mark_used
       (to_location loc) poly_mode Rc_normal p env path
@@ -994,17 +994,21 @@ let transl_primitive loc p env ty ~poly_mode path =
   let rec make_params ty repr_args repr_res =
     match repr_args, repr_res with
     | [], (_, res_repr) ->
-      let res_sort = sort_of_native_repr res_repr in
-      [], Typeopt.layout env (to_location loc) (Jkind.Sort.of_const res_sort) ty
+      let res_sort =
+        Jkind.Sort.of_const (sort_of_native_repr res_repr ~poly_sort)
+      in
+      [], Typeopt.layout env (to_location loc) res_sort ty
     | (((_, arg_repr) as arg) :: repr_args), _ ->
       match Typeopt.is_function_type env ty with
       | None ->
           Misc.fatal_errorf "Primitive %s type does not correspond to arity"
             (Primitive.byte_name p)
       | Some (arg_ty, ret_ty) ->
-          let arg_sort = sort_of_native_repr arg_repr in
+          let arg_sort =
+            Jkind.Sort.of_const (sort_of_native_repr arg_repr ~poly_sort)
+          in
           let arg_layout =
-            Typeopt.layout env (to_location loc) (Jkind.Sort.of_const arg_sort) arg_ty
+            Typeopt.layout env (to_location loc) arg_sort arg_ty
           in
           let arg_mode = to_locality arg in
           let params, return = make_params ret_ty repr_args repr_res in

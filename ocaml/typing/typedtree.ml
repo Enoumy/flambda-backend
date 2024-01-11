@@ -235,7 +235,9 @@ and function_cases =
     fc_attributes: attributes;
   }
 
-and ident_kind = Id_value | Id_prim of Mode.Locality.t option
+and ident_kind =
+  | Id_value
+  | Id_prim of Mode.Locality.t option * Jkind.Sort.t option
 
 and meth =
   | Tmeth_name of string
@@ -470,6 +472,7 @@ and primitive_coercion =
     pc_desc: Primitive.description;
     pc_type: type_expr;
     pc_poly_mode: Mode.Locality.t option;
+    pc_poly_sort: Jkind.Sort.t option;
     pc_env: Env.t;
     pc_loc : Location.t;
   }

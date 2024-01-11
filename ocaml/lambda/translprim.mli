@@ -36,6 +36,7 @@ val transl_primitive :
   Lambda.scoped_location -> Primitive.description -> Env.t ->
   Types.type_expr ->
   poly_mode:Mode.Locality.t option ->
+  poly_sort:Jkind.Sort.t option ->
   Path.t option ->
   Lambda.lambda
 

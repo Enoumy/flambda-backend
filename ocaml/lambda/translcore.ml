@@ -343,8 +343,8 @@ let rec iter_exn_names f pat =
 
 let transl_ident loc env ty path desc kind =
   match desc.val_kind, kind with
-  | Val_prim p, Id_prim poly_mode ->
-      Translprim.transl_primitive loc p env ty ~poly_mode (Some path)
+  | Val_prim p, Id_prim (poly_mode, poly_sort) ->
+      Translprim.transl_primitive loc p env ty ~poly_mode ~poly_sort (Some path)
   | Val_anc _, Id_value ->
       raise(Error(to_location loc, Free_super_var))
   | (Val_reg | Val_self _), Id_value ->
@@ -402,7 +402,7 @@ and transl_exp0 ~in_new_scope ~scopes sort e =
       transl_function ~in_new_scope ~scopes e params body
         ~alloc_mode ~ret_mode ~ret_sort ~region
   | Texp_apply({ exp_desc = Texp_ident(path, _, {val_kind = Val_prim p},
-                                       Id_prim pmode, _);
+                                       Id_prim (pmode, psort), _);
                 exp_type = prim_type; } as funct, oargs, pos, ap_mode)
     when can_apply_primitive p pmode pos oargs ->
       let rec cut_args prim_repr oargs =
@@ -411,7 +411,9 @@ and transl_exp0 ~in_new_scope ~scopes sort e =
         | _, [] -> failwith "Translcore cut_args"
         | ((_, arg_repr) :: prim_repr), ((_, Arg (x, _)) :: oargs) ->
           let arg_exps, extra_args = cut_args prim_repr oargs in
-          let arg_sort = Jkind.Sort.of_const (sort_of_native_repr arg_repr) in
+          let arg_sort =
+            Jkind.Sort.of_const (sort_of_native_repr arg_repr ~poly_sort:psort)
+          in
           (x, arg_sort) :: arg_exps, extra_args
         | _, ((_, Omitted _) :: _) -> assert false
       in
