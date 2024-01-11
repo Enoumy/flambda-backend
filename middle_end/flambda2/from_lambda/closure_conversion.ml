@@ -448,13 +448,16 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
         prim_native_name;
         prim_native_repr_args;
         prim_native_repr_res;
-        prim_is_layout_representation_polymorphic;
+        prim_is_layout_representation_polymorphic
       } :
-       Primitive.description) as prim_desc) ~(args : Simple.t list list)
-    exn_continuation dbg ~current_region
+       Lambda.external_call_description) as prim_desc)
+    ~(args : Simple.t list list) exn_continuation dbg ~current_region
     (k : Acc.t -> Named.t list -> Expr_with_acc.t) : Expr_with_acc.t =
-  if prim_is_layout_representation_polymorphic then
-    Misc.fatal_errorf "close_c_call: C call primitive %s can't be representation polymorphic." prim_name;
+  if prim_is_layout_representation_polymorphic
+  then
+    Misc.fatal_errorf
+      "close_c_call: C call primitive %s can't be representation polymorphic."
+      prim_name;
   let args =
     List.map
       (function
@@ -505,7 +508,6 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
   in
   let box_return_value =
     match prim_native_repr_res with
-    | _, Repr_poly -> Misc.fatal_error "C call should not have Repr_poly"
     | _, Same_as_ocaml_repr _ -> None
     | _, Unboxed_float -> Some (P.Box_number (Naked_float, alloc_mode))
     | _, Unboxed_integer Pnativeint ->
@@ -527,10 +529,9 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
       Apply_cont_expr.continuation apply_cont, false
     | _ -> Continuation.create (), true
   in
-  let kind_of_primitive_native_repr
-      ((_, repr) : Primitive.mode * Primitive.native_repr) =
+  let kind_of_primitive_extern_repr
+      ((_, repr) : Primitive.mode * Lambda.extern_repr) =
     match repr with
-    | Repr_poly -> Misc.fatal_error "C call should not have Repr_poly"
     | Same_as_ocaml_repr sort ->
       K.With_subkind.(
         kind
@@ -544,11 +545,11 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
     | Unboxed_vector (Pvec128 _) -> K.naked_vec128
   in
   let param_arity =
-    List.map kind_of_primitive_native_repr prim_native_repr_args
+    List.map kind_of_primitive_extern_repr prim_native_repr_args
     |> List.map K.With_subkind.anything
     |> Flambda_arity.create_singletons
   in
-  let return_kind = kind_of_primitive_native_repr prim_native_repr_res in
+  let return_kind = kind_of_primitive_extern_repr prim_native_repr_res in
   let return_arity =
     Flambda_arity.create_singletons [K.With_subkind.anything return_kind]
   in
@@ -621,10 +622,9 @@ let close_c_call acc env ~loc ~let_bound_ids_with_kinds
   let call : Acc.t -> Expr_with_acc.t =
     List.fold_left2
       (fun (call : Simple.t list -> Acc.t -> Expr_with_acc.t) arg
-           (arg_repr : Primitive.mode * Primitive.native_repr) ->
+           (arg_repr : Primitive.mode * Lambda.extern_repr) ->
         let unbox_arg : P.unary_primitive option =
           match arg_repr with
-          | _, Repr_poly -> Misc.fatal_error "C call should not have Repr_poly"
           | _, Same_as_ocaml_repr _ -> None
           | _, Unboxed_float -> Some (P.Unbox_number Naked_float)
           | _, Unboxed_integer Pnativeint ->

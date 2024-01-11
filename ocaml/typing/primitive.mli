@@ -44,7 +44,7 @@ type mode =
    typechecking, all [Prim_poly] modes on a given primitive application
    will be instantiated either all to [Local] or all to [Global] *)
 
-type description = private
+type ('repr_t) description_gen = private
   { prim_name: string;         (* Name of primitive  or C function *)
     prim_arity: int;           (* Number of arguments *)
     prim_alloc: bool;          (* Does it allocates or raise? *)
@@ -57,17 +57,15 @@ type description = private
     prim_effects: effects;
     prim_coeffects: coeffects;
     prim_native_name: string;  (* Name of C function for the nat. code gen. *)
-    prim_native_repr_args: (mode * native_repr) list;
-    prim_native_repr_res: mode * native_repr;
+    prim_native_repr_args: (mode * 'repr_t) list;
+    prim_native_repr_res: mode * 'repr_t;
     prim_is_layout_representation_polymorphic: bool }
+
+type description = native_repr description_gen
 
 (* Invariant [List.length d.prim_native_repr_args = d.prim_arity] *)
 
-val simple_on_values
-  :  name:string
-  -> arity:int
-  -> alloc:bool
-  -> description
+val make_prim_repr_args : int -> 'a -> 'a list
 
 val make
   :  name:string
@@ -76,10 +74,10 @@ val make
   -> effects:effects
   -> coeffects:coeffects
   -> native_name:string
-  -> native_repr_args: (mode * native_repr) list
-  -> native_repr_res: mode * native_repr
+  -> native_repr_args: (mode * 'repr) list
+  -> native_repr_res: mode * 'repr
   -> is_layout_representation_polymorphic: bool
-  -> description
+  -> 'repr description_gen
 
 val parse_declaration
   :  Parsetree.value_description

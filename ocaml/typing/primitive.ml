@@ -40,7 +40,7 @@ type mode =
   | Prim_global
   | Prim_poly
 
-type description =
+type ('repr) description_gen =
   { prim_name: string;         (* Name of primitive  or C function *)
     prim_arity: int;           (* Number of arguments *)
     prim_alloc: bool;          (* Does it allocates or raise? *)
@@ -48,9 +48,11 @@ type description =
     prim_effects: effects;
     prim_coeffects: coeffects;
     prim_native_name: string;  (* Name of C function for the nat. code gen. *)
-    prim_native_repr_args: (mode * native_repr) list;
-    prim_native_repr_res: mode * native_repr;
+    prim_native_repr_args: (mode * 'repr) list;
+    prim_native_repr_res: mode * 'repr;
     prim_is_layout_representation_polymorphic: bool }
+
+type description = native_repr description_gen
 
 type error =
   | Old_style_float_with_native_repr_attribute
@@ -91,24 +93,11 @@ let is_untagged = function
   | _, Unboxed_integer _
   | _, Repr_poly -> false
 
-let rec make_native_repr_args arity x =
+let rec make_prim_repr_args arity x =
   if arity = 0 then
     []
   else
-    x :: make_native_repr_args (arity - 1) x
-
-let simple_on_values ~name ~arity ~alloc =
-  {prim_name = name;
-   prim_arity = arity;
-   prim_alloc = alloc;
-   prim_c_builtin = false;
-   prim_effects = Arbitrary_effects;
-   prim_coeffects = Has_coeffects;
-   prim_native_name = "";
-   prim_native_repr_args =
-     make_native_repr_args arity (Prim_global, Same_as_ocaml_repr Jkind.Sort.Value);
-   prim_native_repr_res = (Prim_global, Same_as_ocaml_repr Jkind.Sort.Value);
-   prim_is_layout_representation_polymorphic = false }
+    x :: make_prim_repr_args (arity - 1) x
 
 let make ~name ~alloc ~c_builtin ~effects ~coeffects
       ~native_name ~native_repr_args ~native_repr_res
@@ -220,7 +209,7 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res ~is_layout_poly
                   Inconsistent_noalloc_attributes_for_effects));
   let native_repr_args, native_repr_res =
     if old_style_float then
-      (make_native_repr_args arity (Prim_global, Unboxed_float),
+      (make_prim_repr_args arity (Prim_global, Unboxed_float),
        (Prim_global, Unboxed_float))
     else
       (native_repr_args, native_repr_res)

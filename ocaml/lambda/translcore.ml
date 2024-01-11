@@ -102,7 +102,7 @@ let declare_probe_handlers lam =
 
 let prim_fresh_oo_id =
   Pccall
-    (Primitive.simple_on_values ~name:"caml_fresh_oo_id" ~arity:1 ~alloc:false)
+    (Lambda.simple_prim_on_values ~name:"caml_fresh_oo_id" ~arity:1 ~alloc:false)
 
 let transl_extension_constructor ~scopes env path ext =
   let path =
@@ -426,7 +426,7 @@ and transl_exp0 ~in_new_scope ~scopes sort e =
       in
       let lam =
         Translprim.transl_primitive_application
-          (of_location ~scopes e.exp_loc) p e.exp_env prim_type pmode
+          (of_location ~scopes e.exp_loc) p e.exp_env prim_type pmode ~poly_sort:psort
           path prim_exp args (List.map fst arg_exps) position
       in
       if extra_args = [] then lam

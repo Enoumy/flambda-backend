@@ -247,7 +247,7 @@ let result_layout (p : primitive) =
   | Paddfloat _ | Psubfloat _ | Pmulfloat _ | Pdivfloat _
   | Pbox_float _ -> Lambda.layout_boxed_float
   | Pufloatfield _ | Punbox_float -> Punboxed_float
-  | Pccall { prim_native_repr_res = _, repr_res } -> Lambda.layout_of_native_repr repr_res
+  | Pccall { prim_native_repr_res = _, repr_res } -> Lambda.layout_of_extern_repr repr_res
   | Praise _ -> Lambda.layout_bottom
   | Psequor | Psequand | Pnot
   | Pnegint | Paddint | Psubint | Pmulint

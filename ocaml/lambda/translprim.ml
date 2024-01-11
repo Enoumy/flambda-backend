@@ -121,7 +121,7 @@ let gen_array_set_kind mode =
   if Config.flat_float_array then Pgenarray_set mode else Paddrarray_set mode
 
 let prim_sys_argv =
-  Primitive.simple_on_values ~name:"caml_sys_argv" ~arity:1 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_sys_argv" ~arity:1 ~alloc:true
 
 let to_locality ~poly = function
   | Prim_global, _ -> alloc_heap
@@ -707,51 +707,51 @@ let specialize_primitive env loc ty ~has_constant_constructor prim =
   | _ -> None
 
 let caml_equal =
-  Primitive.simple_on_values ~name:"caml_equal" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_equal" ~arity:2 ~alloc:true
 let caml_string_equal =
-  Primitive.simple_on_values ~name:"caml_string_equal" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_string_equal" ~arity:2 ~alloc:false
 let caml_bytes_equal =
-  Primitive.simple_on_values ~name:"caml_bytes_equal" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_bytes_equal" ~arity:2 ~alloc:false
 let caml_notequal =
-  Primitive.simple_on_values ~name:"caml_notequal" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_notequal" ~arity:2 ~alloc:true
 let caml_string_notequal =
-  Primitive.simple_on_values ~name:"caml_string_notequal" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_string_notequal" ~arity:2 ~alloc:false
 let caml_bytes_notequal =
-  Primitive.simple_on_values ~name:"caml_bytes_notequal" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_bytes_notequal" ~arity:2 ~alloc:false
 let caml_lessequal =
-  Primitive.simple_on_values ~name:"caml_lessequal" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_lessequal" ~arity:2 ~alloc:true
 let caml_string_lessequal =
-  Primitive.simple_on_values ~name:"caml_string_lessequal" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_string_lessequal" ~arity:2 ~alloc:false
 let caml_bytes_lessequal =
-  Primitive.simple_on_values ~name:"caml_bytes_lessequal" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_bytes_lessequal" ~arity:2 ~alloc:false
 let caml_lessthan =
-  Primitive.simple_on_values ~name:"caml_lessthan" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_lessthan" ~arity:2 ~alloc:true
 let caml_string_lessthan =
-  Primitive.simple_on_values ~name:"caml_string_lessthan" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_string_lessthan" ~arity:2 ~alloc:false
 let caml_bytes_lessthan =
-  Primitive.simple_on_values ~name:"caml_bytes_lessthan" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_bytes_lessthan" ~arity:2 ~alloc:false
 let caml_greaterequal =
-  Primitive.simple_on_values ~name:"caml_greaterequal" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_greaterequal" ~arity:2 ~alloc:true
 let caml_string_greaterequal =
-  Primitive.simple_on_values ~name:"caml_string_greaterequal" ~arity:2
+  Lambda.simple_prim_on_values ~name:"caml_string_greaterequal" ~arity:2
     ~alloc:false
 let caml_bytes_greaterequal =
-  Primitive.simple_on_values ~name:"caml_bytes_greaterequal" ~arity:2
+  Lambda.simple_prim_on_values ~name:"caml_bytes_greaterequal" ~arity:2
     ~alloc:false
 let caml_greaterthan =
-  Primitive.simple_on_values ~name:"caml_greaterthan" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_greaterthan" ~arity:2 ~alloc:true
 let caml_string_greaterthan =
-  Primitive.simple_on_values ~name:"caml_string_greaterthan" ~arity:2
+  Lambda.simple_prim_on_values ~name:"caml_string_greaterthan" ~arity:2
     ~alloc:false
 let caml_bytes_greaterthan =
-  Primitive.simple_on_values ~name:"caml_bytes_greaterthan" ~arity:2
+  Lambda.simple_prim_on_values ~name:"caml_bytes_greaterthan" ~arity:2
     ~alloc:false
 let caml_compare =
-  Primitive.simple_on_values ~name:"caml_compare" ~arity:2 ~alloc:true
+  Lambda.simple_prim_on_values ~name:"caml_compare" ~arity:2 ~alloc:true
 let caml_string_compare =
-  Primitive.simple_on_values ~name:"caml_string_compare" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_string_compare" ~arity:2 ~alloc:false
 let caml_bytes_compare =
-  Primitive.simple_on_values ~name:"caml_bytes_compare" ~arity:2 ~alloc:false
+  Lambda.simple_prim_on_values ~name:"caml_bytes_compare" ~arity:2 ~alloc:false
 
 let comparison_primitive comparison comparison_kind =
   match comparison, comparison_kind with
@@ -852,7 +852,7 @@ let lambda_of_loc kind sloc =
     Lconst (Const_immstring scope_name)
 
 let caml_restore_raw_backtrace =
-  Primitive.simple_on_values ~name:"caml_restore_raw_backtrace" ~arity:2
+  Lambda.simple_prim_on_values ~name:"caml_restore_raw_backtrace" ~arity:2
     ~alloc:false
 
 let try_ids = Hashtbl.create 8
@@ -863,13 +863,45 @@ let add_exception_ident id =
 let remove_exception_ident id =
   Hashtbl.remove try_ids id
 
-let lambda_of_prim prim_name prim loc args arg_exps =
+let extern_repr_of_native_repr:
+  poly_sort:Jkind.Sort.t option -> Primitive.native_repr -> Lambda.extern_repr
+  = fun ~poly_sort r -> match r, poly_sort with
+  | Repr_poly, Some s -> Same_as_ocaml_repr (Jkind.Sort.get_default_value s)
+  | Repr_poly, None -> Misc.fatal_error "Unexpected Repr_poly"
+  | Same_as_ocaml_repr s, _ -> Same_as_ocaml_repr s
+  | Unboxed_float, _ -> Unboxed_float
+  | Unboxed_integer i, _ -> Unboxed_integer i
+  | Unboxed_vector i, _ -> Unboxed_vector i
+  | Untagged_int, _ -> Untagged_int
+
+let lambda_of_prim prim_name prim loc args arg_exps ~poly_sort =
   match prim, args with
   | Primitive (prim, arity), args when arity = List.length args ->
       Lprim(prim, args, loc)
   | Sys_argv, [] ->
       Lprim(Pccall prim_sys_argv, [Lconst (const_int 0)], loc)
   | External prim, args ->
+      let native_repr_args =
+        List.map
+        (fun (m, r) -> m, extern_repr_of_native_repr ~poly_sort r)
+          prim.prim_native_repr_args
+      in
+      let native_repr_res =
+        let (m, r) = prim.prim_native_repr_res in
+        m, extern_repr_of_native_repr ~poly_sort r
+      in
+      let prim = Primitive.make
+        ~name:prim.prim_name
+        ~alloc:prim.prim_alloc
+        ~c_builtin:prim.prim_c_builtin
+        ~effects:prim.prim_effects
+        ~coeffects:prim.prim_coeffects
+        ~native_name:prim.prim_native_name
+        ~native_repr_args
+        ~native_repr_res
+        ~is_layout_representation_polymorphic:
+          prim.prim_is_layout_representation_polymorphic
+      in
       Lprim(Pccall prim, args, loc)
   | Comparison(comp, knd), ([_;_] as args) ->
       let prim = comparison_primitive comp knd in
@@ -1023,14 +1055,14 @@ let transl_primitive loc p env ty ~poly_mode ~poly_sort path =
   in
   let args = List.map (fun p -> Lvar p.name) params in
   match params with
-  | [] -> lambda_of_prim p.prim_name prim loc args None
+  | [] -> lambda_of_prim p.prim_name prim loc args None ~poly_sort
   | _ ->
      let loc =
        Debuginfo.Scoped_location.map_scopes (fun ~scopes ->
          Debuginfo.Scoped_location.enter_partial_or_eta_wrapper ~scopes)
          loc
      in
-     let body = lambda_of_prim p.prim_name prim loc args None in
+     let body = lambda_of_prim p.prim_name prim loc args None ~poly_sort in
      let alloc_mode = to_locality p.prim_native_repr_res in
      let () =
        (* CR mshinwell: Write a version of [primitive_may_allocate] that
@@ -1147,7 +1179,7 @@ let primitive_needs_event_after = function
   | Apply _ | Revapply _ -> true
   | Raise _ | Raise_with_backtrace | Loc _ | Frame_pointers | Identity -> false
 
-let transl_primitive_application loc p env ty mode path exp args arg_exps pos =
+let transl_primitive_application loc p env ty mode ~poly_sort path exp args arg_exps pos =
   let prim =
     lookup_primitive_and_mark_used
       (to_location loc) mode pos p env (Some path)
@@ -1165,7 +1197,7 @@ let transl_primitive_application loc p env ty mode path exp args arg_exps pos =
     | None -> prim
     | Some prim -> prim
   in
-  let lam = lambda_of_prim p.prim_name prim loc args (Some arg_exps) in
+  let lam = lambda_of_prim p.prim_name prim loc args (Some arg_exps) ~poly_sort in
   let lam =
     if primitive_needs_event_after prim then begin
       match exp with
