@@ -147,7 +147,7 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res ~is_layout_poly
   let prim_is_layout_representation_polymorphic =
     match is_builtin_prim, is_layout_poly with
     | false, true ->  raise (Error (valdecl.pval_loc,
-                        No_native_primitive_with_non_value))
+                        Invalid_representation_polymorphic_attribute))
     | _, b -> b
   in
   if no_effects_attribute && only_generative_effects_attribute then
