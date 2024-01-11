@@ -23,7 +23,7 @@ Error: This expression has type t_any but an expression was expected of type
        The layout of t_any is any, because
          of the definition of t_any at line 3, characters 0-16.
        But the layout of t_any must be representable, because
-         it's the type of an expression in a structure.
+         it's the representation polymorphic type in an external declaration.
 |}]
 
 type ('a : any) t
@@ -40,7 +40,7 @@ Error: This expression has type t_any t
        The layout of t_any is any, because
          of the definition of t_any at line 3, characters 0-16.
        But the layout of t_any must be representable, because
-         it's the type of an expression in a structure.
+         it's the representation polymorphic type in an external declaration.
 |}]
 
 
@@ -190,7 +190,7 @@ Error: Signature mismatch:
        The layout of 'a is any, because
          of the definition of id at line 2, characters 2-31.
        But the layout of 'a must be representable, because
-         it's the type of an expression in a structure.
+         it's the representation polymorphic type in an external declaration.
 |}]
 
 
