@@ -1606,8 +1606,7 @@ let replace_jkind_any_with_new_sort ty =
     | Some (_, jkind) ->
       jkind
     | None ->
-      (* XXX change why *)
-      let jkind, sort = Jkind.of_new_sort_var ~why:Structure_item_expression in
+      let jkind, sort = Jkind.of_new_sort_var ~why:Repr_poly_in_external in
       new_sort_and_jkind := Some (sort, jkind);
       jkind
   in
