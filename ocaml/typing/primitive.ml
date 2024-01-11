@@ -251,7 +251,7 @@ let oattr_no_effects = { oattr_name = "no_effects" }
 let oattr_only_generative_effects = { oattr_name = "only_generative_effects" }
 let oattr_no_coeffects = { oattr_name = "no_coeffects" }
 let oattr_local_opt = { oattr_name = "local_opt" }
-let oattr_repr_poly = { oattr_name = "repr_poly" }
+let oattr_rep_poly = { oattr_name = "rep_poly" }
 
 let print p osig_val_decl =
   let prims =
@@ -286,7 +286,7 @@ let print p osig_val_decl =
   in
   let attrs =
     if p.prim_is_layout_representation_polymorphic then
-      oattr_repr_poly :: attrs
+      oattr_rep_poly :: attrs
     else
       attrs
   in

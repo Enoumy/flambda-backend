@@ -14,7 +14,7 @@ let f () = id (assert false : t_any)
 [%%expect{|
 module F = Stdlib__Float_u
 type t_any : any
-external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
 Line 6, characters 14-36:
 6 | let f () = id (assert false : t_any)
                   ^^^^^^^^^^^^^^^^^^^^^^
@@ -31,7 +31,7 @@ external[@rep_poly] id : ('a : any). 'a t -> 'a t = "%identity"
 let f () = id (assert false : t_any t)
 [%%expect{|
 type ('a : any) t
-external id : ('a : any). 'a t -> 'a t = "%identity" [@@repr_poly]
+external id : ('a : any). 'a t -> 'a t = "%identity" [@@rep_poly]
 Line 3, characters 14-38:
 3 | let f () = id (assert false : t_any t)
                   ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -48,7 +48,7 @@ external[@rep_poly] id : ('a : any). 'a -> 'a = "%identity"
 (* This works *)
 let () = Format.printf "%f %s\n" (F.to_float (id #1.)) (id "abc"); Format.print_flush ()
 [%%expect{|
-external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
 1.000000 abc
 |}]
 
@@ -81,7 +81,7 @@ end
 
 [%%expect{|
 module S :
-  sig external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly] end
+  sig external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly] end
 |}]
 
 module S : sig
@@ -98,15 +98,15 @@ Lines 3-5, characters 6-3:
 Error: Signature mismatch:
        Modules do not match:
          sig
-           external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+           external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
          end
        is not included in
          sig external id : 'a -> 'a = "%identity" end
        Values do not match:
-         external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+         external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
        is not included in
          external id : 'a -> 'a = "%identity"
-       The two primitives have different [@repr_poly] attributes
+       The two primitives have different [@rep_poly] attributes
 |}]
 
 module S : sig
@@ -125,13 +125,13 @@ Error: Signature mismatch:
          sig external id : 'a -> 'a = "%identity" end
        is not included in
          sig
-           external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+           external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
          end
        Values do not match:
          external id : 'a -> 'a = "%identity"
        is not included in
-         external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
-       The two primitives have different [@repr_poly] attributes
+         external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
+       The two primitives have different [@rep_poly] attributes
 |}]
 
 (* External in struct *)
@@ -178,12 +178,12 @@ Lines 3-5, characters 6-3:
 Error: Signature mismatch:
        Modules do not match:
          sig
-           external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+           external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
          end
        is not included in
          sig val id : ('a : any). 'a -> 'a end
        Values do not match:
-         external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+         external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
        is not included in
          val id : ('a : any). 'a -> 'a
        The type 'a -> 'a is not compatible with the type 'b -> 'b
@@ -211,12 +211,12 @@ Error: Signature mismatch:
          sig val id : ('a : any). 'a -> 'a end
        is not included in
          sig
-           external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+           external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
          end
        Values do not match:
          val id : ('a : any). 'a -> 'a
        is not included in
-         external id : ('a : any). 'a -> 'a = "%identity" [@@repr_poly]
+         external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly]
        The implementation is not a primitive.
 |}]
 

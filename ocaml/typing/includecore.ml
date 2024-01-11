@@ -287,7 +287,7 @@ let report_primitive_mismatch first second ppf err =
       pr "The two primitives' %d%s arguments have different representations"
         n (Misc.ordinal_suffix n)
   | Repr_poly_attr ->
-      pr "The two primitives have different [@@repr_poly] attributes"
+      pr "The two primitives have different [@@rep_poly] attributes"
 
 let report_value_mismatch first second env ppf err =
   let pr fmt = Format.fprintf ppf fmt in
