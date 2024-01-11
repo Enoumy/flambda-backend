@@ -107,7 +107,10 @@ val equal_coeffects : coeffects -> coeffects -> bool
 val native_name_is_external : description -> bool
 
 (** [sort_of_native_repr] returns the sort expected during typechecking (which
-    may be different than the sort used in the external interface). XXX *)
+    may be different than the sort used in the external interface).
+
+    [poly_sort] must be [Some sort] when [Repr_poly] is given. It will produce
+    fatal error if it's [None].  *)
 val sort_of_native_repr : native_repr -> poly_sort:Jkind.Sort.t option -> Jkind.Sort.const
 
 type error =
