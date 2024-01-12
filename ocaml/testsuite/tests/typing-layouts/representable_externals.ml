@@ -1,7 +1,8 @@
 (* TEST
    flags = "-extension layouts"
-   * native
-   * bytecode
+   * flambda2
+   ** native
+   ** bytecode
 *)
 
 
