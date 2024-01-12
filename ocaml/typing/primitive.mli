@@ -91,8 +91,8 @@ val print
   -> Outcometree.out_val_decl
   -> Outcometree.out_val_decl
 
-val native_name: description -> string
-val byte_name: description -> string
+val native_name: 'a description_gen -> string
+val byte_name: 'a description_gen -> string
 val vec128_name: vec128_type -> string
 
 val equal_boxed_integer : boxed_integer -> boxed_integer -> bool
