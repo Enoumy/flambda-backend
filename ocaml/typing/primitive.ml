@@ -143,9 +143,9 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res ~is_layout_poly
                                           "ocaml.only_generative_effects"]
       valdecl.pval_attributes
   in
-  let is_builtin_prim = String.length name > 0 && name.[0] = '%' in
+  let is_lambda_prim = String.length name > 0 && name.[0] = '%' in
   let prim_is_layout_representation_polymorphic =
-    match is_builtin_prim, is_layout_poly with
+    match is_lambda_prim, is_layout_poly with
     | false, true ->  raise (Error (valdecl.pval_loc,
                         Invalid_representation_polymorphic_attribute))
     | _, b -> b
@@ -199,7 +199,7 @@ let parse_declaration valdecl ~native_repr_args ~native_repr_res ~is_layout_poly
                          No_native_primitive_with_repr_attribute))
          | Bad_layout ->
            (* Built-in primitives don't need a native version. *)
-           if not is_builtin_prim then
+           if not is_lambda_prim then
              raise (Error (valdecl.pval_loc,
                            No_native_primitive_with_non_value)))
       (native_repr_res :: native_repr_args);
@@ -346,8 +346,10 @@ let equal_boxed_vector_size bi1 bi2 =
 let equal_native_repr nr1 nr2 =
   match nr1, nr2 with
   | Repr_poly, Repr_poly -> true
-  | Repr_poly, (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _ | Same_as_ocaml_repr _)
-  | (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _ | Same_as_ocaml_repr _), Repr_poly -> false
+  | Repr_poly, (Unboxed_float | Unboxed_integer _
+               | Untagged_int | Unboxed_vector _ | Same_as_ocaml_repr _)
+  | (Unboxed_float | Unboxed_integer _
+    | Untagged_int | Unboxed_vector _ | Same_as_ocaml_repr _), Repr_poly -> false
   | Same_as_ocaml_repr s1, Same_as_ocaml_repr s2 -> Jkind.Sort.equal_const s1 s2
   | Same_as_ocaml_repr _,
     (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _) -> false

@@ -95,6 +95,22 @@ module S :
   sig external id : ('a : any). 'a -> 'a = "%identity" [@@rep_poly] end
 |}]
 
+(* together with local_opt *)
+module S : sig
+  external[@rep_poly] id : ('a : any). ('a[@local_opt]) -> ('a[@local_opt]) = "%identity"
+end = struct
+  external[@rep_poly] id : ('a : any). ('a[@local_opt]) -> ('a[@local_opt]) = "%identity"
+end
+
+[%%expect{|
+module S :
+  sig
+    external id : ('a : any). ('a [@local_opt]) -> ('a [@local_opt])
+      = "%identity" [@@rep_poly]
+  end
+|}]
+
+
 module S : sig
   external id : ('a : any). 'a -> 'a = "%identity"
 end = struct
@@ -425,3 +441,16 @@ let f (): float# M_any.t r = id (assert false : float# M_any.t r)
 let f (): int64# M_any.t r = id (assert false : int64# M_any.t r)
 let f (): int32# M_any.t r = id (assert false : int32# M_any.t r) *)
 
+
+(*************************)
+(* Missing the attribute *)
+
+type ('a : any) t
+external id : ('a : any). 'a t -> int = "%array_length"
+let id' x = id x
+
+[%%expect{|
+type ('a : any) t
+external id : ('a : any). 'a t -> int = "%array_length"
+val id' : ('a : any). 'a t -> int = <fun>
+|}]
