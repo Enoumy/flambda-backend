@@ -1599,7 +1599,10 @@ let rec instance_prim_locals locals mvar macc finalret ty =
   | [], _ ->
      ty
 
-let replace_jkind_any_with_new_sort ty =
+let instance_prim_repr (desc : Primitive.description) ty =
+  if not desc.prim_is_layout_representation_polymorphic
+  then ty, None
+  else
   let new_sort_and_jkind = ref None in
   let get_jkind () =
     match !new_sort_and_jkind with
@@ -1632,17 +1635,13 @@ let replace_jkind_any_with_new_sort ty =
     unmark_type ty;
     match !new_sort_and_jkind with
     | Some (sort, _) ->
-      let old = !current_level in
-      current_level := generic_level;
-      let ty = copy copy_scope ty in
-      current_level := old;
-      ty, Some sort
+      (* We don't want to lower the type vars from generic_level due to
+         usages in [includecore.ml]. This means an extra [instance] call
+         is needed in [type_ident], but we only hit it if it's
+         representation polymorphic. *)
+      generic_instance ty, Some sort
     | None -> ty, None)
 
-let instance_prim_repr (desc : Primitive.description) ty =
-  if desc.prim_is_layout_representation_polymorphic
-  then replace_jkind_any_with_new_sort ty
-  else ty, None
 
 let instance_prim_mode (desc : Primitive.description) ty =
   let is_poly = function Primitive.Prim_poly, _ -> true | _ -> false in
