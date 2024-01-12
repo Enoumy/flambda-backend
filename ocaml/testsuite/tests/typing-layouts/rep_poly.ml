@@ -386,8 +386,8 @@ Line 1, characters 37-39:
 Error: Don't know how to untag this type. Only int can be untagged.
 |}]
 
-(***********************)
-(* Type var in Tconstr *)
+(*************************************)
+(* Type var in nested in other types *)
 
 external[@rep_poly] id : ('a : any). 'a t_with_any -> 'a t_with_any = "%identity"
 
@@ -416,3 +416,12 @@ val f : unit -> float# M_any.t = <fun>
 val f : unit -> int64# M_any.t = <fun>
 val f : unit -> int32# M_any.t = <fun>
 |}]
+
+(* Test this when sorts can be inside unboxed records *)
+(* type ('a : any) r = {field: 'a} [@@unboxed]
+external[@rep_poly] id : ('a : any). 'a M_any.t r -> 'a M_any.t r = "%identity"
+
+let f (): float# M_any.t r = id (assert false : float# M_any.t r)
+let f (): int64# M_any.t r = id (assert false : int64# M_any.t r)
+let f (): int32# M_any.t r = id (assert false : int32# M_any.t r) *)
+
