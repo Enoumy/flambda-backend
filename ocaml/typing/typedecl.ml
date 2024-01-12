@@ -2217,11 +2217,33 @@ let error_if_has_deep_native_repr_attributes core_type =
   in
   default_iterator.typ this_iterator core_type
 
-let make_native_repr env core_type sort ty ~global_repr =
+(* Note that [typ] is guaranteed not to contain sort variables because it was
+   produced by [type_scheme], which defaults them.
+
+   However, there can be jkind [any] present with something like:
+    [external f : ('a : any). 'a -> 'a = "%identity"]
+   The current [type_sort_external] implementation will force ['a] to jkind [value]
+   and not produce an error. It will get typed as:
+    [external f : 'a -> 'a = "%identity"]
+
+   Should consider revisiting this decision. *)
+let type_sort_external ~why env loc typ =
+  match Ctype.type_sort ~why env typ with
+  | Ok s -> Jkind.Sort.get_default_value s
+  | Error err -> raise (Error (loc,Jkind_sort {kloc = External; typ; err}))
+
+let make_native_repr env core_type ty ~global_repr ~is_layout_poly ~why =
   error_if_has_deep_native_repr_attributes core_type;
   match get_native_repr_attribute core_type.ptyp_attributes ~global_repr with
   | Native_repr_attr_absent ->
-    Same_as_ocaml_repr sort
+    begin match get_desc (Ctype.get_unboxed_type_approximation env ty) with
+    | Tvar {jkind} when is_layout_poly
+                      && Jkind.is_any jkind
+                      && get_level ty = Btype.generic_level -> Repr_poly
+    | __ ->
+      let sort = type_sort_external ~why env core_type.ptyp_loc ty in
+      Same_as_ocaml_repr sort
+    end
   | Native_repr_attr_present kind ->
     begin match native_repr_of_type env kind ty with
     | None ->
@@ -2235,28 +2257,7 @@ let prim_const_mode m =
   | Some Local -> Prim_local
   | None -> assert false
 
-(* Note that [ty] is guaranteed not to contain sort variables because it was
-   produced by [type_scheme], which defaults them.  Further, if ty is an arrow
-   we know its bits are representable, so [type_sort_external] can only fail
-   on externals with non-arrow types. *)
-(* CR layouts v3: When we allow non-representable function args/returns, the
-   representability argument above isn't quite right. Decide whether we want to
-   allow non-representable types in external args/returns then. *)
-let type_sort_external ~why env loc typ =
-  match Ctype.type_sort ~why env typ with
-  | Ok s -> Jkind.Sort.get_default_value s
-  | Error err -> raise (Error (loc,Jkind_sort {kloc = External; typ; err}))
-
 let rec parse_native_repr_attributes env core_type ty rmode ~global_repr ~is_layout_poly =
-  let get_repr ~why core_type ty =
-    match get_desc ty with
-      | Tvar {jkind} when is_layout_poly
-                        && Jkind.is_any jkind
-                        && get_level ty = Btype.generic_level -> Repr_poly
-      | __ ->
-        let sort = type_sort_external ~why env core_type.ptyp_loc ty in
-        make_native_repr env core_type sort ty ~global_repr
-  in
   match core_type.ptyp_desc, get_desc ty,
     get_native_repr_attribute core_type.ptyp_attributes ~global_repr:None
   with
@@ -2265,7 +2266,9 @@ let rec parse_native_repr_attributes env core_type ty rmode ~global_repr ~is_lay
   | Ptyp_arrow (_, ct1, ct2), Tarrow ((_,marg,mret), t1, t2, _), _
     when not (Builtin_attributes.has_curry core_type.ptyp_attributes) ->
     let t1, _ = Btype.tpoly_get_poly t1 in
-    let repr_arg = get_repr ~why:External_argument ct1 t1 in
+    let repr_arg =
+      make_native_repr env ct1 t1 ~global_repr ~is_layout_poly ~why:External_argument
+    in
     let mode =
       if Builtin_attributes.has_local_opt ct1.ptyp_attributes
       then Prim_poly
@@ -2284,7 +2287,9 @@ let rec parse_native_repr_attributes env core_type ty rmode ~global_repr ~is_lay
       then Prim_poly
       else rmode
     in
-    let repr_res = get_repr ~why:External_result core_type ty in
+    let repr_res =
+      make_native_repr env core_type ty ~global_repr ~is_layout_poly ~why:External_result
+    in
     ([], (rmode, repr_res))
 
 let check_unboxable env loc ty =
