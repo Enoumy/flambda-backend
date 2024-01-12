@@ -1090,7 +1090,8 @@ end = struct
     | Optional_arg_default ->
       fprintf ppf "it's the type of an optional argument default"
     | Repr_poly_in_external ->
-      fprintf ppf "it's the representation polymorphic type in an external declaration"
+      fprintf ppf
+        "it's the representation polymorphic type in an external declaration"
 
   let rec format_annotation_context ppf : annotation_context -> unit = function
     | Type_declaration p ->
