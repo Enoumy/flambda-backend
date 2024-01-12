@@ -384,14 +384,6 @@ let native_name_is_external p =
   let nat_name = native_name p in
   nat_name <> "" && nat_name.[0] <> '%'
 
-let sort_of_native_repr repr ~poly_sort = match repr, poly_sort with
-  | Same_as_ocaml_repr s, _ -> s
-  | (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _), _ ->
-    Jkind.Sort.Value
-  | Repr_poly, Some sort -> Jkind.Sort.get_default_value sort
-  | Repr_poly, None ->
-    Misc.fatal_error "Repr_poly doesn't have a sort"
-
 let report_error ppf err =
   match err with
   | Old_style_float_with_native_repr_attribute ->

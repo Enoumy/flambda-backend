@@ -79,7 +79,7 @@ type loc_kind =
 
 type prim =
   | Primitive of Lambda.primitive * int
-  | External of Primitive.description
+  | External of Lambda.external_call_description
   | Sys_argv
   | Comparison of comparison * comparison_kind
   | Raise of Lambda.raise_kind
@@ -139,9 +139,48 @@ let to_modify_mode ~poly = function
     | None -> assert false
     | Some mode -> transl_modify_mode mode
 
-let lookup_primitive loc poly pos p =
-  let mode = to_locality ~poly p.prim_native_repr_res in
-  let arg_modes = List.map (to_modify_mode ~poly) p.prim_native_repr_args in
+let extern_repr_of_native_repr:
+  poly_sort:Jkind.Sort.t option -> Primitive.native_repr -> Lambda.extern_repr
+  = fun ~poly_sort r -> match r, poly_sort with
+  | Repr_poly, Some s -> Same_as_ocaml_repr (Jkind.Sort.get_default_value s)
+  | Repr_poly, None -> Misc.fatal_error "Unexpected Repr_poly"
+  | Same_as_ocaml_repr s, _ -> Same_as_ocaml_repr s
+  | Unboxed_float, _ -> Unboxed_float
+  | Unboxed_integer i, _ -> Unboxed_integer i
+  | Unboxed_vector i, _ -> Unboxed_vector i
+  | Untagged_int, _ -> Untagged_int
+
+let sort_of_native_repr ~poly_sort repr =
+  match extern_repr_of_native_repr ~poly_sort repr with
+| Same_as_ocaml_repr s -> s
+| (Unboxed_float | Unboxed_integer _ | Untagged_int | Unboxed_vector _) ->
+  Jkind.Sort.Value
+
+let to_lambda_prim prim ~poly_sort =
+  let native_repr_args =
+    List.map
+    (fun (m, r) -> m, extern_repr_of_native_repr ~poly_sort r)
+      prim.prim_native_repr_args
+  in
+  let native_repr_res =
+    let (m, r) = prim.prim_native_repr_res in
+    m, extern_repr_of_native_repr ~poly_sort r
+  in
+  Primitive.make
+    ~name:prim.prim_name
+    ~alloc:prim.prim_alloc
+    ~c_builtin:prim.prim_c_builtin
+    ~effects:prim.prim_effects
+    ~coeffects:prim.prim_coeffects
+    ~native_name:prim.prim_native_name
+    ~native_repr_args
+    ~native_repr_res
+    ~is_layout_representation_polymorphic:
+      prim.prim_is_layout_representation_polymorphic
+
+let lookup_primitive loc ~poly_mode ~poly_sort pos p =
+  let mode = to_locality ~poly:poly_mode p.prim_native_repr_res in
+  let arg_modes = List.map (to_modify_mode ~poly:poly_mode) p.prim_native_repr_args in
   let get_first_arg_mode () =
     match arg_modes with
     | mode :: _ -> mode
@@ -149,13 +188,18 @@ let lookup_primitive loc poly pos p =
         Misc.fatal_errorf "Primitive \"%s\" unexpectedly had zero arguments"
           p.prim_name
   in
+  let lambda_prim = to_lambda_prim p ~poly_sort in
+  let layout =
+    let (_, repr) = lambda_prim.prim_native_repr_res in
+    Lambda.layout_of_extern_repr repr
+  in
   let prim = match p.prim_name with
     | "%identity" -> Identity
     | "%bytes_to_string" -> Primitive (Pbytes_to_string, 1)
     | "%bytes_of_string" -> Primitive (Pbytes_of_string, 1)
     | "%ignore" -> Primitive (Pignore, 1)
-    | "%revapply" -> Revapply (pos, Lambda.layout_any_value)
-    | "%apply" -> Apply (pos, Lambda.layout_any_value)
+    | "%revapply" -> Revapply (pos, layout)
+    | "%apply" -> Apply (pos, layout)
     | "%loc_LOC" -> Loc Loc_LOC
     | "%loc_FILE" -> Loc Loc_FILE
     | "%loc_LINE" -> Loc Loc_LINE
@@ -432,11 +476,11 @@ let lookup_primitive loc poly pos p =
     | "%bswap_int64" -> Primitive ((Pbbswap(Pint64, mode)), 1)
     | "%bswap_native" -> Primitive ((Pbbswap(Pnativeint, mode)), 1)
     | "%int_as_pointer" -> Primitive (Pint_as_pointer mode, 1)
-    | "%opaque" -> Primitive (Popaque Lambda.layout_any_value, 1)
+    | "%opaque" -> Primitive (Popaque layout, 1)
     | "%sys_argv" -> Sys_argv
-    | "%send" -> Send (pos, Lambda.layout_any_value)
-    | "%sendself" -> Send_self (pos, Lambda.layout_any_value)
-    | "%sendcache" -> Send_cache (pos, Lambda.layout_any_value)
+    | "%send" -> Send (pos, layout)
+    | "%sendself" -> Send_self (pos, layout)
+    | "%sendcache" -> Send_cache (pos, layout)
     | "%equal" -> Comparison(Equal, Compare_generic)
     | "%notequal" -> Comparison(Not_equal, Compare_generic)
     | "%lessequal" -> Comparison(Less_equal, Compare_generic)
@@ -445,7 +489,7 @@ let lookup_primitive loc poly pos p =
     | "%greaterthan" -> Comparison(Greater_than, Compare_generic)
     | "%compare" -> Comparison(Compare, Compare_generic)
     | "%obj_dup" -> Primitive(Pobj_dup, 1)
-    | "%obj_magic" -> Primitive(Pobj_magic Lambda.layout_any_value, 1)
+    | "%obj_magic" -> Primitive(Pobj_magic layout, 1)
     | "%array_to_iarray" -> Primitive (Parray_to_iarray, 1)
     | "%array_of_iarray" -> Primitive (Parray_of_iarray, 1)
     | "%unbox_float" -> Primitive(Punbox_float, 1)
@@ -469,12 +513,12 @@ let lookup_primitive loc poly pos p =
     | "%box_int64" -> Primitive(Pbox_int (Pint64, mode), 1)
     | s when String.length s > 0 && s.[0] = '%' ->
        raise(Error(loc, Unknown_builtin_primitive s))
-    | _ -> External p
+    | _ -> External lambda_prim
   in
   prim
 
-let lookup_primitive_and_mark_used loc mode pos p env path =
-  match lookup_primitive loc mode pos p with
+let lookup_primitive_and_mark_used loc ~poly_mode ~poly_sort pos p env path =
+  match lookup_primitive loc ~poly_mode ~poly_sort pos p with
   | External _ as e -> add_used_primitive loc env path; e
   | x -> x
 
@@ -863,45 +907,13 @@ let add_exception_ident id =
 let remove_exception_ident id =
   Hashtbl.remove try_ids id
 
-let extern_repr_of_native_repr:
-  poly_sort:Jkind.Sort.t option -> Primitive.native_repr -> Lambda.extern_repr
-  = fun ~poly_sort r -> match r, poly_sort with
-  | Repr_poly, Some s -> Same_as_ocaml_repr (Jkind.Sort.get_default_value s)
-  | Repr_poly, None -> Misc.fatal_error "Unexpected Repr_poly"
-  | Same_as_ocaml_repr s, _ -> Same_as_ocaml_repr s
-  | Unboxed_float, _ -> Unboxed_float
-  | Unboxed_integer i, _ -> Unboxed_integer i
-  | Unboxed_vector i, _ -> Unboxed_vector i
-  | Untagged_int, _ -> Untagged_int
-
-let lambda_of_prim prim_name prim loc args arg_exps ~poly_sort =
+let lambda_of_prim prim_name prim loc args arg_exps =
   match prim, args with
   | Primitive (prim, arity), args when arity = List.length args ->
       Lprim(prim, args, loc)
   | Sys_argv, [] ->
       Lprim(Pccall prim_sys_argv, [Lconst (const_int 0)], loc)
   | External prim, args ->
-      let native_repr_args =
-        List.map
-        (fun (m, r) -> m, extern_repr_of_native_repr ~poly_sort r)
-          prim.prim_native_repr_args
-      in
-      let native_repr_res =
-        let (m, r) = prim.prim_native_repr_res in
-        m, extern_repr_of_native_repr ~poly_sort r
-      in
-      let prim = Primitive.make
-        ~name:prim.prim_name
-        ~alloc:prim.prim_alloc
-        ~c_builtin:prim.prim_c_builtin
-        ~effects:prim.prim_effects
-        ~coeffects:prim.prim_coeffects
-        ~native_name:prim.prim_native_name
-        ~native_repr_args
-        ~native_repr_res
-        ~is_layout_representation_polymorphic:
-          prim.prim_is_layout_representation_polymorphic
-      in
       Lprim(Pccall prim, args, loc)
   | Comparison(comp, knd), ([_;_] as args) ->
       let prim = comparison_primitive comp knd in
@@ -990,7 +1002,10 @@ let check_primitive_arity loc p =
       Some Mode.Locality.global
     | Prim_local, _ -> Some Mode.Locality.local
   in
-  let prim = lookup_primitive loc mode Rc_normal p in
+  (* By a similar assumption, the sort shouldn't change the arity. So it's ok
+     to lie here. *)
+  let sort = Some (Jkind.Sort.of_const Value) in
+  let prim = lookup_primitive loc ~poly_mode:mode ~poly_sort:sort Rc_normal p in
   let ok =
     match prim with
     | Primitive (_,arity) -> arity = p.prim_arity
@@ -1014,7 +1029,7 @@ let check_primitive_arity loc p =
 let transl_primitive loc p env ty ~poly_mode ~poly_sort path =
   let prim =
     lookup_primitive_and_mark_used
-      (to_location loc) poly_mode Rc_normal p env path
+      (to_location loc) ~poly_mode ~poly_sort Rc_normal p env path
   in
   let has_constant_constructor = false in
   let prim =
@@ -1055,14 +1070,14 @@ let transl_primitive loc p env ty ~poly_mode ~poly_sort path =
   in
   let args = List.map (fun p -> Lvar p.name) params in
   match params with
-  | [] -> lambda_of_prim p.prim_name prim loc args None ~poly_sort
+  | [] -> lambda_of_prim p.prim_name prim loc args None
   | _ ->
      let loc =
        Debuginfo.Scoped_location.map_scopes (fun ~scopes ->
          Debuginfo.Scoped_location.enter_partial_or_eta_wrapper ~scopes)
          loc
      in
-     let body = lambda_of_prim p.prim_name prim loc args None ~poly_sort in
+     let body = lambda_of_prim p.prim_name prim loc args None in
      let alloc_mode = to_locality p.prim_native_repr_res in
      let () =
        (* CR mshinwell: Write a version of [primitive_may_allocate] that
@@ -1179,10 +1194,10 @@ let primitive_needs_event_after = function
   | Apply _ | Revapply _ -> true
   | Raise _ | Raise_with_backtrace | Loc _ | Frame_pointers | Identity -> false
 
-let transl_primitive_application loc p env ty mode ~poly_sort path exp args arg_exps pos =
+let transl_primitive_application loc p env ty ~poly_mode ~poly_sort path exp args arg_exps pos =
   let prim =
     lookup_primitive_and_mark_used
-      (to_location loc) mode pos p env (Some path)
+      (to_location loc) ~poly_mode ~poly_sort pos p env (Some path)
   in
   let has_constant_constructor =
     match arg_exps with
@@ -1197,7 +1212,7 @@ let transl_primitive_application loc p env ty mode ~poly_sort path exp args arg_
     | None -> prim
     | Some prim -> prim
   in
-  let lam = lambda_of_prim p.prim_name prim loc args (Some arg_exps) ~poly_sort in
+  let lam = lambda_of_prim p.prim_name prim loc args (Some arg_exps) in
   let lam =
     if primitive_needs_event_after prim then begin
       match exp with
