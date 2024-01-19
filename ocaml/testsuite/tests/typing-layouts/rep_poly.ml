@@ -442,8 +442,8 @@ let f (): int64# M_any.t r = id (assert false : int64# M_any.t r)
 let f (): int32# M_any.t r = id (assert false : int32# M_any.t r) *)
 
 
-(*************************)
-(* Missing the attribute *)
+(********************************************)
+(* Some primitives require rep_poly to work *)
 
 type ('a : any) t
 external id : ('a : any). 'a t -> int = "%array_length"
@@ -451,6 +451,25 @@ let id' x = id x
 
 [%%expect{|
 type ('a : any) t
-external id : ('a : any). 'a t -> int = "%array_length"
+Line 2, characters 14-37:
+2 | external id : ('a : any). 'a t -> int = "%array_length"
+                  ^^^^^^^^^^^^^^^^^^^^^^^
+Error: The primitive [%array_length] doesn't work well with type variables of
+       layout any. Consider using [@rep_poly].
+|}]
+
+external[@rep_poly] id : ('a : any). 'a t -> int = "%array_length"
+let id' x = id x
+
+[%%expect{|
+external id : ('a : any). 'a t -> int = "%array_length" [@@rep_poly]
+val id' : 'a t -> int = <fun>
+|}]
+
+external id : ('a : any). 'a t -> int = "%identity"
+let id' x = id x
+
+[%%expect{|
+external id : ('a : any). 'a t -> int = "%identity"
 val id' : ('a : any). 'a t -> int = <fun>
 |}]

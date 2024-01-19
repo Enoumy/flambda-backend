@@ -94,6 +94,7 @@ type error =
   | Nonrec_gadt
   | Invalid_private_row_declaration of type_expr
   | Local_not_enabled
+  | Unexpected_jkind_any_in_primitive of string
 
 open Typedtree
 
@@ -2314,6 +2315,27 @@ let check_unboxable env loc ty =
     all_unboxable_types
     ()
 
+let prim_expecting_any prim =
+  match prim.prim_name with
+  | "%array_length"
+  | "%array_safe_get"
+  | "%array_safe_set"
+  | "%array_unsafe_get"
+  | "%array_unsafe_set" -> false
+  | _ -> true
+
+let error_if_jkind_any_occurs_unexpectly prim env cty ty =
+  if prim.prim_is_layout_representation_polymorphic then ()
+  else if prim_expecting_any prim then ()
+  else
+  let has_any =
+    List.exists
+      (fun ty -> Jkind.is_any (Ctype.estimate_type_jkind env ty))
+      (Ctype.free_variables ty)
+  in
+  if not has_any then ()
+  else raise(Error(cty.ctyp_loc, Unexpected_jkind_any_in_primitive(prim.prim_name)))
+
 (* Translate a value declaration *)
 let transl_value_decl env loc valdecl =
   let cty = Typetexp.transl_type_scheme env valdecl.pval_type in
@@ -2357,6 +2379,7 @@ let transl_value_decl env loc valdecl =
           ~native_repr_res
           ~is_layout_poly
       in
+      error_if_jkind_any_occurs_unexpectly prim env cty ty;
       if prim.prim_arity = 0 &&
          (prim.prim_name = "" || prim.prim_name.[0] <> '%') then
         raise(Error(valdecl.pval_type.ptyp_loc, Null_arity_external));
@@ -3035,6 +3058,9 @@ let report_error ppf = function
   | Local_not_enabled ->
       fprintf ppf "@[The local extension is disabled@ \
                    To enable it, pass the '-extension local' flag@]"
+  | Unexpected_jkind_any_in_primitive(name) ->
+      fprintf ppf "@[The primitive [%s] doesn't work well with type variables of@ \
+                    layout any. Consider using [@@rep_poly].@]" name
 
 let () =
   Location.register_error_of_exn
