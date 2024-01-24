@@ -47,6 +47,8 @@
 extern int caml_parser_trace;
 extern char caml_system__code_begin, caml_system__code_end;
 
+CAMLextern void caml_assert_arch_extensions();
+
 /* Initialize the atom table and the static data and code area limits. */
 
 struct segment { char * begin; char * end; };
@@ -108,6 +110,8 @@ value caml_startup_common(char_os **argv, int pooling)
   char_os * exe_name, * proc_self_exe;
   char tos;
   value res;
+
+  caml_assert_arch_extensions();
 
   /* Initialize the domain */
   caml_init_domain();

@@ -927,27 +927,24 @@ let emit_push_trap_label handler =
 module Extension = struct
   module E = Arch.Extension
 
-  (* Must be kept in sync with runtime/isa.c *)
-  let control_symbol = "caml_required_amd64_extensions"
+  let symbol : E.t -> string = function
+    | POPCNT -> "caml_arch_popcnt"
+    | PREFETCHW -> "caml_arch_prefetchw"
+    | PREFETCHWT1 -> "caml_arch_prefetchwt1"
+    | SSE3 -> "caml_arch_sse3"
+    | SSSE3 -> "caml_arch_ssse3"
+    | SSE4_1 -> "caml_arch_sse4_1"
+    | SSE4_2 -> "caml_arch_sse4_2"
+    | CLMUL -> "caml_arch_clmul"
+    | BMI -> "caml_arch_bmi"
+    | BMI2 -> "caml_arch_bmi2"
 
-  let index : E.t -> int = function
-    | POPCNT -> 0
-    | PREFETCHW -> 1
-    | PREFETCHWT1 -> 2
-    | SSE3 -> 3
-    | SSSE3 -> 4
-    | SSE4_1 -> 5
-    | SSE4_2 -> 6
-    | CLMUL -> 7
-    | BMI -> 8
-    | BMI2 -> 9
-
-  let emit_check () = (* Emit extension control symbol. *)
-    let open Int64 in
-    let all = E.config () in
-    let word =  E.Set.fold (fun ext acc -> logor acc (shift_left 1L (index ext))) all 0L in
-    emit_global_label_for_symbol control_symbol;
-    D.qword (Const word)
+  let emit_symbols () =
+    List.iter (fun ext ->
+      let name = symbol ext in
+      D.label name;
+      D.weak name
+    ) (E.available ())
 end
 
 (* Emit Code *)
@@ -1981,6 +1978,8 @@ let begin_assembly unix =
   let code_end = Cmm_helpers.make_symbol "code_end" in
   Emitaux.Dwarf_helpers.begin_dwarf ~build_asm_directives ~code_begin ~code_end
     ~file_emitter:D.file;
+
+  Extension.emit_symbols ();
 
   if system = S_win64 then begin
     D.extrn "caml_call_gc" NEAR;
