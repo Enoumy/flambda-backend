@@ -40,14 +40,13 @@
 #include "caml/stack.h"
 #include "caml/startup_aux.h"
 #include "caml/sys.h"
+#include "caml/isa.h"
 #ifdef HAS_UI
 #include "caml/ui.h"
 #endif
 
 extern int caml_parser_trace;
 extern char caml_system__code_begin, caml_system__code_end;
-
-CAMLextern void caml_assert_arch_extensions();
 
 /* Initialize the atom table and the static data and code area limits. */
 
