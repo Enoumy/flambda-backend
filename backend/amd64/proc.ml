@@ -470,6 +470,9 @@ let destroyed_at_basic (basic : Cfg_intf.S.basic) =
     [| rax |]
   | Op (Specific (Irdtsc | Irdpmc)) ->
     [| rax; rdx |]
+  | Op Poll -> destroyed_at_alloc_or_poll
+  | Op (Alloc _) ->
+    destroyed_at_alloc_or_poll
   | Op (Move | Spill | Reload
        | Const_int _ | Const_float _ | Const_symbol _ | Const_vec128 _
        | Stackoffset _
@@ -506,8 +509,6 @@ let destroyed_at_basic (basic : Cfg_intf.S.basic) =
 let destroyed_at_terminator (terminator : Cfg_intf.S.terminator) =
   match terminator with
   | Never -> assert false
-  | Prim {op = Alloc _; _} ->
-    destroyed_at_alloc_or_poll
   | Always _ | Parity_test _ | Truth_test _ | Float_test _ | Int_test _
   | Return | Raise _ | Tailcall_self  _ | Tailcall_func _
   | Prim {op = Probe _; _}
@@ -527,7 +528,6 @@ let destroyed_at_terminator (terminator : Cfg_intf.S.terminator) =
                        | Istore_int (_, _, _) | Ioffset_loc (_, _)
                        | Iprefetch _); _ } ->
     Misc.fatal_error "no instructions specific for this architecture can raise"
-  | Poll_and_jump _ -> destroyed_at_alloc_or_poll
 
 (* CR-soon xclerc for xclerc: consider having more destruction points.
    We current return `true` when `destroyed_at_terminator` returns
@@ -538,8 +538,6 @@ let destroyed_at_terminator (terminator : Cfg_intf.S.terminator) =
 let is_destruction_point ~(more_destruction_points : bool) (terminator : Cfg_intf.S.terminator) =
   match terminator with
   | Never -> assert false
-  | Prim {op = Alloc _; _} ->
-    false
   | Always _ | Parity_test _ | Truth_test _ | Float_test _ | Int_test _
   | Return | Raise _ | Tailcall_self  _ | Tailcall_func _
   | Prim {op = Probe _; _} ->
@@ -560,7 +558,6 @@ let is_destruction_point ~(more_destruction_points : bool) (terminator : Cfg_int
                        | Istore_int (_, _, _) | Ioffset_loc (_, _)
                        | Iprefetch _); _ } ->
     Misc.fatal_error "no instructions specific for this architecture can raise"
-  | Poll_and_jump _ -> false
 
 (* Maximal register pressure *)
 
