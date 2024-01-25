@@ -940,6 +940,7 @@ module Extension = struct
     | BMI2 -> "caml_arch_bmi2"
 
   let emit_symbols () =
+    if system <> S_macosx then
     List.iter (fun ext ->
       let name = symbol ext in
       D.label name;
@@ -1979,8 +1980,6 @@ let begin_assembly unix =
   Emitaux.Dwarf_helpers.begin_dwarf ~build_asm_directives ~code_begin ~code_end
     ~file_emitter:D.file;
 
-  Extension.emit_symbols ();
-
   if system = S_win64 then begin
     D.extrn "caml_call_gc" NEAR;
     D.extrn "caml_c_call" NEAR;
@@ -2011,6 +2010,7 @@ let begin_assembly unix =
   end;
 
   D.data ();
+  Extension.emit_symbols ();
   emit_global_label "data_begin";
 
   emit_named_text_section code_begin;
