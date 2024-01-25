@@ -939,8 +939,13 @@ module Extension = struct
     | BMI -> "caml_arch_bmi"
     | BMI2 -> "caml_arch_bmi2"
 
+  let is_nasm_or_masm () =
+    match system with
+    | S_macosx | S_win32 | S_win64 -> true
+    | _ -> false
+
   let emit_symbols () =
-    if system <> S_macosx then
+    if not (is_nasm_or_masm ()) then
     List.iter (fun ext ->
       let name = symbol ext in
       D.label name;
