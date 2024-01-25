@@ -18,7 +18,9 @@
 #include "caml/mlvalues.h"
 #include "caml/isa.h"
 
-#if defined __x86_64__ || defined _M_X64
+// Weak symbols are only supported in ELF
+
+#if (defined __x86_64__ || defined _M_X64) && defined __ELF__
 
 // Must be kept in sync with amd64/emit.mlp
 
@@ -141,4 +143,8 @@ CAMLexport void caml_assert_arch_extensions(void) {
     }
 }
 
-#endif /* No aarch64 extensions are currently available. */
+#else // No extensions for other architectures are currently available.
+
+CAMLexport void caml_assert_arch_extensions(void) {}
+
+#endif
