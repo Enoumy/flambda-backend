@@ -1996,6 +1996,9 @@ let begin_assembly unix =
     D.extrn "caml_raise_exn" NEAR;
   end;
 
+  D.data ();
+  Extension.emit_symbols ();
+
   if !Clflags.dlcode || Arch.win64 then begin
     (* from amd64.S; could emit these constants on demand *)
     begin match system with
@@ -2015,7 +2018,6 @@ let begin_assembly unix =
   end;
 
   D.data ();
-  Extension.emit_symbols ();
   emit_global_label "data_begin";
 
   emit_named_text_section code_begin;
