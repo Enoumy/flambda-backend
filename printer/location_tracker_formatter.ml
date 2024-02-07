@@ -75,7 +75,9 @@ module Tracking_formatter = struct
       { label; source; start_in_buffer }
 
     let to_mapping ~end_in_buffer { label; source; start_in_buffer } =
-      let ir = Location.{ loc_start = start_in_buffer; loc_end = end_in_buffer; loc_ghost=true} in
+      (* XXX enoumy: Figure out why the warning 45 started showing up in regards to the
+         Location module opening... *)
+      let ir = { Location.loc_start = start_in_buffer; loc_end = end_in_buffer; loc_ghost=true} in
       Mappings.Item.create ~source ~ir ~label
   end
 
@@ -98,13 +100,13 @@ module Tracking_formatter = struct
       (* When a newline is created [line] obviously increases by one, but also
          now both bol and char are the same as the new line is empty. *)
       t.position <-
-        Lexing.{ t.position with pos_lnum = t.position.pos_lnum + 1
+        { t.position with pos_lnum = t.position.pos_lnum + 1
                ; pos_bol = t.position.pos_cnum
                }
     in
     let track_new_char () =
       t.position <-
-        Lexing.{ t.position with
+        { t.position with
           pos_cnum = t.position.pos_cnum + 1
         }
     in
@@ -164,7 +166,7 @@ module Tracking_formatter = struct
   let create ~file ~ppf =
     let t =
       { ppf
-      ; position = Lexing.{pos_fname=file; pos_lnum=1; pos_bol=0; pos_cnum=0}
+      ; position = {pos_fname=file; pos_lnum=1; pos_bol=0; pos_cnum=0}
       ; mappings = Mappings.empty
       ; pending_mappings = []
       }
