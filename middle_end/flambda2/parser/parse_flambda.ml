@@ -31,7 +31,7 @@ let run_parser ~start_symbol ~start_pos (lb : Lexing.lexbuf) =
   in
   (* [Lexing] assumes that the position it starts in has cnum = bol = 0, so we
      humor it and then add [start_pos] back in if there's an error. *)
-  let pos = initial_pos Lexing.(start_pos.pos_fname) in
+  let pos = initial_pos start_pos.Lexing.pos_fname in
   let start = start_symbol pos in
   try
     Parser.MenhirInterpreter.loop_handle
