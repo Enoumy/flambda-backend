@@ -749,7 +749,8 @@ let src_pos loc attrs env =
   ; exp_extra = []
   ; exp_type = instance Predef.type_lexing_position
   ; exp_attributes = attrs
-  ; exp_env = env }
+  ; exp_env = env
+  }
 
 type record_extraction_result =
   | Record_type of Path.t * Path.t * Types.label_declaration list * record_representation
@@ -4286,8 +4287,9 @@ and type_approx_function =
     match params with
     | { pparam_desc = Pparam_newtype _ } :: _ -> ()
     | { pparam_desc = Pparam_val (label, _, pat) } :: params ->
+        let label, pat = Typetexp.transl_label_from_pat label pat in
         let ty_res =
-          type_approx_fun_one_param env loc (fst (Typetexp.transl_label_from_pat label pat)) (Some pat) ty_expected
+          type_approx_fun_one_param env loc label (Some pat) ty_expected
             ~first ~in_function
         in
         loop env params c body ty_res ~in_function ~first:false
@@ -6704,9 +6706,12 @@ and type_function
         params_contain_gadt = contains_gadt; newtypes = newtype :: newtypes;
         fun_alloc_mode; ret_info;
       }
-  | { pparam_desc = Pparam_val (arg_label, default_arg, (pat as param_pattern)); pparam_loc }
+  | { pparam_desc = Pparam_val (arg_label, default_arg, pat); pparam_loc }
       :: rest
     ->
+      let typed_arg_label, pat =
+        Typetexp.transl_label_from_pat arg_label pat
+      in
       let mode_annots = mode_annots_from_pat_attrs pat in
       let has_poly = has_poly_constraint pat in
       if has_poly && is_optional_parsetree arg_label then
@@ -6735,12 +6740,9 @@ and type_function
             ty_arg_mono; expected_pat_mode; expected_inner_mode; curry;
             alloc_mode;
           } =
-        let arg_label, _ =
-          Typetexp.transl_label_from_pat arg_label pat
-        in
         split_function_ty env expected_mode ty_expected loc
           ~is_first_val_param:first ~is_final_val_param
-          ~arg_label ~in_function ~has_poly ~mode_annots
+          ~arg_label:typed_arg_label ~in_function ~has_poly ~mode_annots
       in
       (* [ty_arg_internal] is the type of the parameter viewed internally
          to the function. This is different than [ty_arg_mono] exactly for
@@ -6815,14 +6817,11 @@ and type_function
         | [ result ], partial -> result, partial
         | ([] | _ :: _ :: _), _ -> assert false
       in
-      let arg_label, _ =
-        Typetexp.transl_label_from_pat arg_label param_pattern
-      in
       let exp_type =
         instance
           (newgenty
              (Tarrow
-                ((arg_label, arg_mode, ret_mode), ty_arg, ty_ret, commu_ok)))
+                ((typed_arg_label, arg_mode, ret_mode), ty_arg, ty_ret, commu_ok)))
       in
       (* This is quadratic, as it operates over the entire tail of the
          type for each new parameter. Now that functions are n-ary, we
@@ -6838,11 +6837,13 @@ and type_function
         let ls, tvar = list_labels env ty in
         List.for_all (( <> ) Nolabel) ls && not tvar
       in
-      if is_optional arg_label && not_nolabel_function ty_ret
-      then
-        Location.prerr_warning
-          pat.pat_loc
-          Warnings.Unerasable_optional_argument;
+      if not_nolabel_function ty_ret then
+        if is_optional typed_arg_label then
+          Location.prerr_warning pat.pat_loc
+            Warnings.Unerasable_optional_argument
+        else if is_position typed_arg_label then
+          Location.prerr_warning pat.pat_loc
+            Warnings.Unerasable_position_argument;
       let fp_kind, fp_param =
         match default_arg with
         | None ->
@@ -6856,7 +6857,7 @@ and type_function
         { has_poly;
           param =
             { fp_kind;
-              fp_arg_label = arg_label;
+              fp_arg_label = typed_arg_label;
               fp_param;
               fp_partial = partial;
               fp_newtypes = newtypes;
