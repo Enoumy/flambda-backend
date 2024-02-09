@@ -1537,7 +1537,7 @@ let rec approx_declaration cl =
            classes to work with jkinds *)
         match l with
         | Optional _ -> Ctype.instance var_option
-        | Position _ -> ctyp Ttyp_src_pos (Ctype.newconstr Predef.path_lexing_position [])
+        | Position _ -> Predef.type_lexing_position
         | Labelled _ | Nolabel -> Ctype.newvar (Jkind.value ~why:Class_term_argument)
       in
       let arg = Ctype.newmono arg in
