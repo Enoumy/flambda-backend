@@ -1360,7 +1360,7 @@ let rec check_uniqueness_exp (ienv : Ienv.t) exp : UF.t =
     UF.pars (uf_let :: (uf_ands @ [uf_body]))
   | Texp_unreachable -> UF.unused
   | Texp_extension_constructor _ -> UF.unused
-  | Texp_src_pos -> (* XXX enoumy: Think more about this..  *) UF.unused
+  | Texp_src_pos ->  UF.unused
   | Texp_open (open_decl, e) ->
     let uf =
       mark_shared_open_variables ienv

@@ -637,7 +637,6 @@ let check_arg_type styp =
 
 let transl_label (label : Parsetree.arg_label)
     (arg_opt : Parsetree.core_type option) =
-  (* XXX enoumy: Why is arg_opt an option? *)
   match label, arg_opt with
   | Labelled l, Some { ptyp_desc = Ptyp_extension ({txt="src_pos"; _}, _); _}
       -> Position l

@@ -519,10 +519,6 @@ let expression sub exp =
           List.map (sub.value_binding sub) list,
           sub.expr sub exp)
     | Texp_function { params; body } ->
-        (* XXX enoumy: I think this one will need to be entirely rewritten...
-
-           enoumy: I am accepting the one from main. I think Texp_function changed a lot...
-        *)
         let open Jane_syntax.N_ary_functions in
         let body, constraint_ =
           match body with

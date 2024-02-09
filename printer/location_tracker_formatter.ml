@@ -75,9 +75,13 @@ module Tracking_formatter = struct
       { label; source; start_in_buffer }
 
     let to_mapping ~end_in_buffer { label; source; start_in_buffer } =
-      (* XXX enoumy: Figure out why the warning 45 started showing up in regards to the
-         Location module opening... *)
-      let ir = { Location.loc_start = start_in_buffer; loc_end = end_in_buffer; loc_ghost=true} in
+      (* XXX jrodri: Figure out why the warning 45 started showing up in regards to the
+         Location module opening...
+
+         jrodri: Hmm, the warning seems to have disappeared after the tests being fixed. See if
+         reverting this still results in compilation in the "parent" branch.
+         *)
+      let ir = Location.{ loc_start = start_in_buffer; loc_end = end_in_buffer; loc_ghost=true} in
       Mappings.Item.create ~source ~ir ~label
   end
 

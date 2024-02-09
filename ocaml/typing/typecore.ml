@@ -4207,8 +4207,6 @@ let rec type_approx env sexp ty_expected =
   | None      -> match sexp.pexp_desc with
     Pexp_let (_, _, e) -> type_approx env e ty_expected
   | Pexp_fun _ | Pexp_function _ ->
-      (* XXX enoumy: this one is weird.../the resolution makes it seem like these
-         are unhandled... Unsure what is correct... *)
       Misc.fatal_error
         "Unexpected [Pexp_fun]/[Pexp_function] outside of Jane Syntax construct"
   | Pexp_match (_, {pc_rhs=e}::_) -> type_approx env e ty_expected

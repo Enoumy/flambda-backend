@@ -86,8 +86,5 @@ let _ = (new c ())#m()
 
 [%%expect{|
 - : lexing_position =
-{pos_fname = ""; pos_lnum = 1; pos_bol = 2106; pos_cnum = 2114}
-|}, Principal{|
-- : lexing_position =
-{pos_fname = ""; pos_lnum = 1; pos_bol = 2234; pos_cnum = 2242}
+{pos_fname = ""; pos_lnum = 1; pos_bol = 2219; pos_cnum = 2227}
 |}]

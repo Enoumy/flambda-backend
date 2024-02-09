@@ -437,8 +437,6 @@ and class_type_aux env virt self_scope scty =
       cltyp (Tcty_signature clsig) typ
 
   | Pcty_arrow (l, sty, scty) ->
-      (* CR src_pos: Implement Position arguments for classes, and pass a
-         reasonable type to translate the label below *)
       let l = transl_label l (Some sty) in
       let cty = transl_simple_type ~new_var_jkind:Any env ~closed:false Alloc.Const.legacy sty in
       let ty = cty.ctyp_type in
@@ -1210,8 +1208,6 @@ and class_expr_aux cl_num val_env met_env virt self_scope scl =
       in
       class_expr cl_num val_env met_env virt self_scope sfun
   | Pcl_fun (l, None, spat, scl') ->
-      (* CR src_pos: Implement Position arguments for classes, and pass a
-         reasonable type to translate the label below *)
       let l, spat = transl_label_from_pat l spat in
       if Typecore.has_poly_constraint spat then
         raise(Error(spat.ppat_loc, val_env, Polymorphic_class_parameter));
@@ -1258,8 +1254,6 @@ and class_expr_aux cl_num val_env met_env virt self_scope scl =
       let cl =
         Ctype.with_raised_nongen_level
           (fun () -> class_expr cl_num val_env' met_env virt self_scope scl') in
-      (* CR src_pos: The below should probably become is_omittable once
-         classes involve Position arguments *)
       if not_nolabel_function cl.cl_type then begin
         match l with
          | Optional _ -> 
@@ -1537,7 +1531,16 @@ let rec approx_declaration cl =
            classes to work with jkinds *)
         match l with
         | Optional _ -> Ctype.instance var_option
-        | Position _ -> Predef.type_lexing_position
+        | Position _ ->
+            (* XXX jrodri: I _think_ this needs to be wrapped around a [Ctype.instance]..., although
+             I don't know why... I am solely pattern matching on other instances in the codebase.
+             My first implementation did now wrap it around [Ctype.instance : type_expr -> type_expr]
+             and things work, so I don't quite understand what [instance] does. Maybe it's so different
+             ['a option] can be "different", but elsewhere in the codebase
+             "unit" is also being called with the [instance]... Maybe it's
+             something about the inferencer that I do not yet understand...
+             *)
+            Ctype.instance Predef.type_lexing_position
         | Labelled _ | Nolabel -> Ctype.newvar (Jkind.value ~why:Class_term_argument)
       in
       let arg = Ctype.newmono arg in
